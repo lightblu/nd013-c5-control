@@ -34,7 +34,7 @@ void PID::UpdateError(double cte) {
    /**
    * TODO: Update PID errors based on cte.
    **/
-   if(!new_delta_time){
+   if(!dt_){
       // We would get a div by zero, and we have likely not been initialized.
       // If really someone set the time do 0.0 we can claim there is no progress and nothing to do, makes not much sense.
       return;
