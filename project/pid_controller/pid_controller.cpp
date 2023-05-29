@@ -8,10 +8,11 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
+#include <algorithm>
 
 using namespace std;
 
-PID::PID() {}
+PID::PID(): errorP_{0.0}, errorI_{0.0}, errorD_{0.0} {}
 
 PID::~PID() {}
 
@@ -19,13 +20,30 @@ void PID::Init(double Kpi, double Kii, double Kdi, double output_lim_maxi, doubl
    /**
    * TODO: Initialize PID coefficients (and errors, if needed)
    **/
+   kP_ = Kpi;
+   kI_ = Kii;
+   kD_ = Kdi;
+   oMax_ = output_lim_maxi;
+   oMin_ = output_lim_mini;
+   errorP_ = 0.0;
+   errorI_ = 0.0;
+   errorD_ = 0.0;
 }
-
 
 void PID::UpdateError(double cte) {
    /**
    * TODO: Update PID errors based on cte.
    **/
+   if(!new_delta_time){
+      // We would get a div by zero, and we have likely not been initialized.
+      // If really someone set the time do 0.0 we can claim there is no progress and nothing to do, makes not much sense.
+      return;
+   }
+
+   errorD_ = (cte - errorP_) / dt_;
+   errorP_ = cte;
+   errorI_ = cte * dt_;
+
 }
 
 double PID::TotalError() {
@@ -33,12 +51,14 @@ double PID::TotalError() {
    * TODO: Calculate and return the total error
     * The code should return a value in the interval [output_lim_mini, output_lim_maxi]
    */
-    double control;
-    return control;
+    double control{(kP_ * errorP_) + (kI_ * errorI_) + (kD_ * errorD_)};
+
+    return std::min(oMax_, std::max(oMin_, control));
 }
 
-double PID::UpdateDeltaTime(double new_delta_time) {
+void PID::UpdateDeltaTime(double new_delta_time) {
    /**
    * TODO: Update the delta time with new value
    */
+   dt_ = new_delta_time;
 }

@@ -8,8 +8,8 @@
 #define PID_CONTROLLER_H
 
 class PID {
-public:
 
+private:
    /**
    * TODO: Create the PID class
    **/
@@ -17,18 +17,29 @@ public:
     /*
     * Errors
     */
+   double errorP_;
+   double errorI_;
+   double errorD_;
 
     /*
     * Coefficients
     */
+   double kP_;
+   double kI_;
+   double kD_;
 
     /*
     * Output limits
     */
+   double oMax_;
+   double oMin_;
   
     /*
     * Delta time
     */
+   double dt_;
+
+public:
 
     /*
     * Constructor
@@ -58,7 +69,7 @@ public:
     /*
     * Update the delta time.
     */
-    double UpdateDeltaTime(double new_delta_time);
+    void UpdateDeltaTime(double new_delta_time);
 };
 
 #endif //PID_CONTROLLER_H
