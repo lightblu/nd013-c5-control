@@ -203,13 +203,6 @@ int main ()
   double new_delta_time;
   int i = 0;
 
-  fstream file_steer;
-  file_steer.open("steer_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
-  file_steer.close();
-  fstream file_throttle;
-  file_throttle.open("throttle_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
-  file_throttle.close();
-
   time_t prev_timer;
   time_t timer;
   time(&prev_timer);
@@ -228,6 +221,14 @@ int main ()
   PID pid_steer = PID();
   PID pid_throttle = PID();
 
+  fstream file_steer;
+  file_steer.open("steer_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
+  file_steer << "#" << pid_steer << std::endl;
+  file_steer.close();
+  fstream file_throttle;
+  file_throttle.open("throttle_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
+  file_throttle << "#" << pid_throttle << std::endl;
+  file_throttle.close();
   h.onMessage([&pid_steer, &pid_throttle, &new_delta_time, &timer, &prev_timer, &i, &prev_timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
         auto s = hasData(data);
@@ -238,9 +239,9 @@ int main ()
 
           // create file to save values
           fstream file_steer;
-          file_steer.open("steer_pid_data.txt");
+          file_steer.open("steer_pid_data.txt", std::ios_base::app);
           fstream file_throttle;
-          file_throttle.open("throttle_pid_data.txt");
+          file_throttle.open("throttle_pid_data.txt", std::ios_base::app);
 
           vector<double> x_points = data["traj_x"];
           vector<double> y_points = data["traj_y"];
@@ -309,14 +310,10 @@ int main ()
 //           pid_steer.UpdateError(error_steer);
 //           steer_output = pid_steer.TotalError();
 
-//           // Save data
-//           file_steer.seekg(std::ios::beg);
-//           for(int j=0; j < i - 1; ++j) {
-//               file_steer.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-//           }
-//           file_steer  << i ;
-//           file_steer  << " " << error_steer;
-//           file_steer  << " " << steer_output << endl;
+          // Save data
+          file_steer  << i ;
+          file_steer  << " " << error_steer;
+          file_steer  << " " << steer_output << endl;
 
           ////////////////////////////////////////
           // Throttle control
@@ -357,15 +354,11 @@ int main ()
 //             brake_output = -throttle;
 //           }
 
-//           // Save data
-//           file_throttle.seekg(std::ios::beg);
-//           for(int j=0; j < i - 1; ++j){
-//               file_throttle.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-//           }
-//           file_throttle  << i ;
-//           file_throttle  << " " << error_throttle;
-//           file_throttle  << " " << brake_output;
-//           file_throttle  << " " << throttle_output << endl;
+          // Save data
+          file_throttle  << i ;
+          file_throttle  << " " << error_throttle;
+          file_throttle  << " " << brake_output;
+          file_throttle  << " " << throttle_output << endl;
 
 
           // Send control
