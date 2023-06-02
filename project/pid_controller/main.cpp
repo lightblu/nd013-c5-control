@@ -221,14 +221,15 @@ int main ()
   // Via instructions: The output of the steer controller should be inside [-1.2, 1.2], throttle inside [-1, 1].
   // Not good style follows with two statements on one line, but for easier testing and documenting throguh parameter attempts..
 
-  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.00, 1, -1); // #1
-  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.00, 0.00, 1, -1);   // #2  try some more
-  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.01, 0.00, 1, -1);   // #3  #2 now oscillated (too much?), nwo try to dampen it
-  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.02, 0.00, 1, -1);   // #4  need more damp
-  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.04, 0.00, 1, -1);   // #5  need more damp
-  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.08, 0.00, 1, -1);   // #5  need more damp
+  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.01, 0.00, 0.00, 1, -1); // #01 => much too little throttle, no movement
+  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.00, 1, -1); // #02 => some osciallations, try to dampen then critically next
+  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.01, 1, -1); // #03 => start 
+  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.1, 1, -1); // #04 => more dampening
+  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.00, 0.15, 1, -1); // #05 => still no effect.. increase p and also d a bit more?
+  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.05, 0.1, 1, -1); // #06 => more dampening
+  pid_steer.Init(0.2, 0.05, 0.1, 1.2, -1.2); pid_throttle.Init(0.15, 0.05, 0.1, 1, -1); // #07 => try together with streeing, throttle aloen seems to introduce other problems => REACHES END OF ROAD!!
   
-  pid_steer.Init(0.2, 0.04, 0.15, 1.2, -1.2); pid_throttle.Init(0.2, 0.04, 0.15, 1, -1);
+  //pid_steer.Init(0.3, 0.01, 0.1, 1.2, -1.2); pid_throttle.Init(0.2, 0.02, 0.11, 1, -1); // #07 => try together with streeing, throttle aloen seems to introduce other problems => REACHES END OF ROAD!!
 
   // Clear outputfiles and put PID parameters as first comment line into them
   fstream file_steer;
@@ -338,7 +339,7 @@ int main ()
           
           // The desired
           double wanted_angle = angle_between_points(x_position, y_position, x_points[best_i], y_points[best_i]);
-          error_steer = yaw - wanted_angle;
+          error_steer = wanted_angle - yaw;
 
           /**
           * TODO (step 3): uncomment these lines
@@ -375,7 +376,7 @@ int main ()
           // Proposal from instructions:
           //error_throttle = v_points[v_points.size()-1] - velocity;
           // But as described above, we also take our best_i we found here!
-          error_throttle = velocity - v_points[best_i];
+          error_throttle = v_points[best_i] - velocity;
 
           double throttle_output;
           double brake_output;
