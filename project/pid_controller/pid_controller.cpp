@@ -62,3 +62,8 @@ void PID::UpdateDeltaTime(double new_delta_time) {
    */
    dt_ = new_delta_time;
 }
+
+std::ostream& operator<<(std::ostream& os, const PID& pid)
+{
+   return os << "P=" << pid.kP_ << " D=" << pid.kD_ << " I=" << pid.kI_;
+}

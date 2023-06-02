@@ -7,6 +7,8 @@
 #ifndef PID_CONTROLLER_H
 #define PID_CONTROLLER_H
 
+#include <iostream>
+
 class PID {
 
 private:
@@ -70,6 +72,8 @@ public:
     * Update the delta time.
     */
     void UpdateDeltaTime(double new_delta_time);
+
+    friend std::ostream& operator<<(std::ostream& os, const PID& pid);
 };
 
 #endif //PID_CONTROLLER_H
