@@ -207,20 +207,30 @@ int main ()
   time_t timer;
   time(&prev_timer);
 
-  // initialize pid steer
+  // initialize pid steer & pid throttle
+  
   /**
   * TODO (Step 1): create pid (pid_steer) for steer command and initialize values
   **/
-
-
-  // initialize pid throttle
   /**
   * TODO (Step 1): create pid (pid_throttle) for throttle command and initialize values
   **/
-
   PID pid_steer = PID();
   PID pid_throttle = PID();
 
+  // Via instructions: The output of the steer controller should be inside [-1.2, 1.2], throttle inside [-1, 1].
+  // Not good style follows with two statements on one line, but for easier testing and documenting throguh parameter attempts..
+
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.00, 1, -1); // #1
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.00, 0.00, 1, -1);   // #2  try some more
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.01, 0.00, 1, -1);   // #3  #2 now oscillated (too much?), nwo try to dampen it
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.02, 0.00, 1, -1);   // #4  need more damp
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.04, 0.00, 1, -1);   // #5  need more damp
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.08, 0.00, 1, -1);   // #5  need more damp
+  
+  pid_steer.Init(0.2, 0.04, 0.15, 1.2, -1.2); pid_throttle.Init(0.2, 0.04, 0.15, 1, -1);
+
+  // Clear outputfiles and put PID parameters as first comment line into them
   fstream file_steer;
   file_steer.open("steer_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
   file_steer << "#" << pid_steer << std::endl;
@@ -229,6 +239,8 @@ int main ()
   file_throttle.open("throttle_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
   file_throttle << "#" << pid_throttle << std::endl;
   file_throttle.close();
+  
+  
   h.onMessage([&pid_steer, &pid_throttle, &new_delta_time, &timer, &prev_timer, &i, &prev_timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
         auto s = hasData(data);
@@ -289,26 +301,51 @@ int main ()
           /**
           * TODO (step 3): uncomment these lines
           **/
-//           // Update the delta time with the previous command
-//           pid_steer.UpdateDeltaTime(new_delta_time);
+         // Update the delta time with the previous command
+         pid_steer.UpdateDeltaTime(new_delta_time);
 
           // Compute steer error
           double error_steer;
-
-
           double steer_output;
 
           /**
           * TODO (step 3): compute the steer error (error_steer) from the position and the desired trajectory
           **/
-//           error_steer = 0;
+          // This was the most unclear part from the instructions, as for the velocities instruction said:
+          // "The last point of v_points vector contains the velocity computed by the path planner."
+          // However from the forum, and the following output, figured out that we should figure out which point
+          // from the 20 planned ones is actually the next. We do this by looking for the one with the smallest distance
+          // that is in front of us!
+          size_t best_i = 0;
+          size_t best_dist = HUGE_VAL;
+          
+          cout << "\n*** x=" << x_position << " y=" << y_position << " yaw=" << yaw << "\n";
+          for(size_t i=0; i<x_points.size(); i++)
+          {
+            double distance = pow((x_position - x_points[i]), 2) + pow((y_position - y_points[i]), 2);
+            double angle = angle_between_points(x_position, y_position, x_points[i],  y_points[i]);
+            cout << "  [" << i << "] x=" << x_points[i] << " y=" << y_points[i] << " dist=" << distance << " angle=" << (angle-yaw) << "(" << (angle-yaw)*(180.0/3.141592653589793238463) << ")\n";
+
+            // We only want to consider those points that lie "forward" of us, so within the possible steering of -68deg til 68deg (1.2 in radians), then we want the closest point
+            if((-1.2 <= (angle-yaw)) && ((angle-yaw) <= 1.2) && distance < best_dist)
+            {
+          		best_i = i;
+                best_dist = distance;
+            }
+          }
+          cout << " The best next point from the planner is at index: " << best_i << "\n";
+          
+          
+          // The desired
+          double wanted_angle = angle_between_points(x_position, y_position, x_points[best_i], y_points[best_i]);
+          error_steer = yaw - wanted_angle;
 
           /**
           * TODO (step 3): uncomment these lines
           **/
-//           // Compute control to apply
-//           pid_steer.UpdateError(error_steer);
-//           steer_output = pid_steer.TotalError();
+          // Compute control to apply
+          pid_steer.UpdateError(error_steer);
+          steer_output = pid_steer.TotalError();
 
           // Save data
           file_steer  << i ;
@@ -322,8 +359,8 @@ int main ()
           /**
           * TODO (step 2): uncomment these lines
           **/
-//           // Update the delta time with the previous command
-//           pid_throttle.UpdateDeltaTime(new_delta_time);
+          // Update the delta time with the previous command
+          pid_throttle.UpdateDeltaTime(new_delta_time);
 
           // Compute error of speed
           double error_throttle;
@@ -331,9 +368,14 @@ int main ()
           * TODO (step 2): compute the throttle error (error_throttle) from the position and the desired speed
           **/
           // modify the following line for step 2
-          error_throttle = 0;
 
-
+          // Instructions: "The last point of v_points vector contains the velocity computed by the path planner."
+          // So our error is the difference between that and the current velocity.
+          
+          // Proposal from instructions:
+          //error_throttle = v_points[v_points.size()-1] - velocity;
+          // But as described above, we also take our best_i we found here!
+          error_throttle = velocity - v_points[best_i];
 
           double throttle_output;
           double brake_output;
@@ -341,18 +383,18 @@ int main ()
           /**
           * TODO (step 2): uncomment these lines
           **/
-//           // Compute control to apply
-//           pid_throttle.UpdateError(error_throttle);
-//           double throttle = pid_throttle.TotalError();
+          // Compute control to apply
+          pid_throttle.UpdateError(error_throttle);
+          double throttle = pid_throttle.TotalError();
 
-//           // Adapt the negative throttle to break
-//           if (throttle > 0.0) {
-//             throttle_output = throttle;
-//             brake_output = 0;
-//           } else {
-//             throttle_output = 0;
-//             brake_output = -throttle;
-//           }
+          // Adapt the negative throttle to break
+          if (throttle > 0.0) {
+           throttle_output = throttle;
+           brake_output = 0;
+          } else {
+           throttle_output = 0;
+           brake_output = -throttle;
+          }
 
           // Save data
           file_throttle  << i ;
