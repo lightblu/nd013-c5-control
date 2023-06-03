@@ -44,6 +44,8 @@ void PID::UpdateError(double cte) {
    errorP_ = cte;
    errorI_ = cte * dt_;
 
+  
+  cout << "###PID::UpdateError p_error=" << errorP_ << " d_error="<< errorD_ << "i_error="<< errorI_ << endl;
 }
 
 double PID::TotalError() {
@@ -52,6 +54,8 @@ double PID::TotalError() {
     * The code should return a value in the interval [output_lim_mini, output_lim_maxi]
    */
     double control{(kP_ * errorP_) + (kI_ * errorI_) + (kD_ * errorD_)};
+  
+    cout << "###PID::TotalError calculated control => " << control << endl;
 
     return std::min(oMax_, std::max(oMin_, control));
 }
@@ -65,5 +69,5 @@ void PID::UpdateDeltaTime(double new_delta_time) {
 
 std::ostream& operator<<(std::ostream& os, const PID& pid)
 {
-   return os << "P=" << pid.kP_ << " D=" << pid.kD_ << " I=" << pid.kI_;
+   return os << "P=" << pid.kP_ << " I=" << pid.kI_ << " D=" << pid.kD_;
 }

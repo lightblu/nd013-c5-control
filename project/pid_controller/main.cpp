@@ -221,14 +221,20 @@ int main ()
   // Via instructions: The output of the steer controller should be inside [-1.2, 1.2], throttle inside [-1, 1].
   // Not good style follows with two statements on one line, but for easier testing and documenting throguh parameter attempts..
 
-  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.01, 0.00, 0.00, 1, -1); // #01 => much too little throttle, no movement
-  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.00, 1, -1); // #02 => some osciallations, try to dampen then critically next
-  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.01, 1, -1); // #03 => start 
-  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.1, 1, -1); // #04 => more dampening
-  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.00, 0.15, 1, -1); // #05 => still no effect.. increase p and also d a bit more?
-  pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.05, 0.1, 1, -1); // #06 => more dampening
-  pid_steer.Init(0.2, 0.05, 0.1, 1.2, -1.2); pid_throttle.Init(0.15, 0.05, 0.1, 1, -1); // #07 => try together with streeing, throttle aloen seems to introduce other problems => REACHES END OF ROAD!!
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.01, 0.00, 0.00, 1, -1); // #01 => much too little throttle, no movement
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.00, 1, -1); // #02 => some osciallations, try to dampen then critically next
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.01, 1, -1); // #03 => start 
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.00, 0.1, 1, -1); // #04 => more dampening
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.2, 0.00, 0.15, 1, -1); // #05 => still no effect.. increase p and also d a bit more?
+  //pid_steer.Init(0.0, 0.00, 0.00, 1.2, -1.2); pid_throttle.Init(0.1, 0.05, 0.1, 1, -1); // #06 => more dampening
+  //pid_steer.Init(0.2, 0.05, 0.1, 1.2, -1.2); pid_throttle.Init(0.15, 0.05, 0.1, 1, -1); // #07 => try together with streeing, throttle aloen seems to introduce other problems => REACHES END OF ROAD!!
+  //pid_steer.Init(0.2, 0.01, 0.05, 1.2, -1.2); pid_throttle.Init(0.15, 0.02, 0.15, 1, -1); // #07 => try together with streeing, throttle aloen seems to introduce other problems => REACHES END OF ROAD!!
+
   
+  //pid_steer.Init(0.2, 0.0011, 0.1, 1.2, -1.2); pid_throttle.Init(0.3, 0.001, 0.15, 1.0, -1.0); // #8
+  pid_steer.Init(0.5, 0.00001, 0.07, 0.6, -0.6); pid_throttle.Init(0.25, 0.00001, 0.12, 0.5, -0.5); // #8
+  
+    
   //pid_steer.Init(0.3, 0.01, 0.1, 1.2, -1.2); pid_throttle.Init(0.2, 0.02, 0.11, 1, -1); // #07 => try together with streeing, throttle aloen seems to introduce other problems => REACHES END OF ROAD!!
 
   // Clear outputfiles and put PID parameters as first comment line into them
@@ -315,30 +321,31 @@ int main ()
           // This was the most unclear part from the instructions, as for the velocities instruction said:
           // "The last point of v_points vector contains the velocity computed by the path planner."
           // However from the forum, and the following output, figured out that we should figure out which point
-          // from the 20 planned ones is actually the next. We do this by looking for the one with the smallest distance
-          // that is in front of us!
-          size_t best_i = 0;
+          // from the 20 planned ones is actually the next. When slow, this is usually always 0?!
+          // We do this by looking for the one with the smallest distance that is in front of us!
+          size_t best_idx = 0;
           size_t best_dist = HUGE_VAL;
           
-          cout << "\n*** x=" << x_position << " y=" << y_position << " yaw=" << yaw << "\n";
-          for(size_t i=0; i<x_points.size(); i++)
+          cout << "\n*** " << i << "[dt=" << new_delta_time << "] ***" << "x=" << x_position << " y=" << y_position << " yaw=" << yaw << " v=" << velocity << "\n";
+          for(size_t idx=0; idx<x_points.size(); idx++)
           {
-            double distance = pow((x_position - x_points[i]), 2) + pow((y_position - y_points[i]), 2);
-            double angle = angle_between_points(x_position, y_position, x_points[i],  y_points[i]);
-            cout << "  [" << i << "] x=" << x_points[i] << " y=" << y_points[i] << " dist=" << distance << " angle=" << (angle-yaw) << "(" << (angle-yaw)*(180.0/3.141592653589793238463) << ")\n";
+            double distance = sqrt(pow((x_position - x_points[idx]), 2) + pow((y_position - y_points[idx]), 2));
+            double angle = angle_between_points(x_position, y_position, x_points[idx],  y_points[idx]);
+            cout << "  [" << idx << "] x=" << x_points[idx] << " y=" << y_points[idx] << " dist=" << distance << " angle=" << (angle-yaw) << "(" << (angle-yaw)*(180.0/3.141592653589793238463) << ")" << " v=" << v_points[idx] << "\n";
 
             // We only want to consider those points that lie "forward" of us, so within the possible steering of -68deg til 68deg (1.2 in radians), then we want the closest point
-            if((-1.2 <= (angle-yaw)) && ((angle-yaw) <= 1.2) && distance < best_dist)
+            if((-1.2 <= (angle-yaw)) && ((angle-yaw) <= 1.2) && distance < best_dist && distance > 5)
             {
-          		best_i = i;
+          		best_idx = idx;
                 best_dist = distance;
             }
           }
-          cout << " The best next point from the planner is at index: " << best_i << "\n";
+          //best_i = 18;  // Or fix it with large lookahead?
+          cout << " The best next point from the planner is at index: " << best_idx << "\n";
           
           
           // The desired
-          double wanted_angle = angle_between_points(x_position, y_position, x_points[best_i], y_points[best_i]);
+          double wanted_angle = angle_between_points(x_position, y_position, x_points[best_idx], y_points[best_idx]);
           error_steer = wanted_angle - yaw;
 
           /**
@@ -352,6 +359,8 @@ int main ()
           file_steer  << i ;
           file_steer  << " " << error_steer;
           file_steer  << " " << steer_output << endl;
+          cout << "+++ " << i << " +++" << "steer error_steer=" << error_steer << " steer=" << steer_output << std::endl;
+
 
           ////////////////////////////////////////
           // Throttle control
@@ -376,7 +385,9 @@ int main ()
           // Proposal from instructions:
           //error_throttle = v_points[v_points.size()-1] - velocity;
           // But as described above, we also take our best_i we found here!
-          error_throttle = v_points[best_i] - velocity;
+          //error_throttle = v_points[best_idx] - velocity;
+          // The planned speed is too much!
+          error_throttle = (v_points[best_idx]) - velocity;
 
           double throttle_output;
           double brake_output;
@@ -403,6 +414,7 @@ int main ()
           file_throttle  << " " << brake_output;
           file_throttle  << " " << throttle_output << endl;
 
+          cout << "+++ " << i << " +++" << "throttle error=" << error_throttle << " throttle=" << throttle_output << " break=" << brake_output << std::endl << endl;
 
           // Send control
           json msgJson;
